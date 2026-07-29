@@ -1,20 +1,19 @@
-# diagnostic-auto
-# 🚗 Diagnostic Auto - Application OBD-II
+#  Diagnostic Auto - Application OBD-II
 
 Application de diagnostic automobile complète développée en Python avec Flask.
 
-## 📋 Fonctionnalités
+##  Fonctionnalités
 
-- 🔌 Connexion via câble OBD-II vers USB (ELM327)
-- 📊 Lecture en temps réel des données moteur (RPM, vitesse, température, etc.)
-- 🔴 Diagnostic des codes d'erreur (DTC) pour tous les systèmes
-- 🛞 Support des systèmes avancés : ABS, Airbag, Transmission
-- 🔧 Services spéciaux : réinitialisation adaptations, vidange, freins
-- 📈 Graphiques en temps réel
-- ⚙️ Mode expert avec commandes personnalisées
-- 🌐 Interface web responsive
+-  Connexion via câble OBD-II vers USB (ELM327)
+-  Lecture en temps réel des données moteur (RPM, vitesse, température, etc.)
+-  Diagnostic des codes d'erreur (DTC) pour tous les systèmes
+-  Support des systèmes avancés : ABS, Airbag, Transmission
+-  Services spéciaux : réinitialisation adaptations, vidange, freins
+-  Graphiques en temps réel
+-  Mode expert avec commandes personnalisées
+-  Interface web responsive
 
-## 🛠️ Technologies utilisées
+##  Technologies utilisées
 
 - **Python 3.8+**
 - **Flask** - Serveur web
@@ -22,7 +21,7 @@ Application de diagnostic automobile complète développée en Python avec Flask
 - **Chart.js** - Graphiques
 - **HTML/CSS/JavaScript** - Interface utilisateur
 
-## 📦 Installation
+##  Installation
 
 ```bash
 # 1. Cloner le dépôt
@@ -43,7 +42,9 @@ pip install obd flask pyserial
 
 # 5. Lancer l'application
 python app.py
-🚀 Utilisation
+
+**Utilisation
+
 Branchez le câble OBD-II sur votre véhicule et sur votre ordinateur
 
 Ouvrez votre navigateur sur http://127.0.0.1:5000
@@ -62,7 +63,7 @@ Services : Réinitialisations et tests
 
 Live Data : Graphiques temps réel
 
-📁 Structure du projet
+ **Structure du projet
 text
 diagnostic-auto/
 ├── app.py                 # Serveur Flask principal
@@ -72,18 +73,17 @@ diagnostic-auto/
 ├── .gitignore             # Fichiers à ignorer
 ├── README.md              # Documentation
 └── requirements.txt       # Dépendances
-🛒 Matériel requis
+ Matériel requis
 Câble OBD-II vers USB (ELM327 recommandé)
 
 Véhicule compatible OBD-II (2000+)
 
-⚠️ Avertissement
+** Avertissement
 Cette application est fournie à des fins éducatives et de diagnostic. L'auteur décline toute responsabilité en cas d'utilisation inappropriée ou de dommages causés au véhicule.
 
-📝 Licence
+** Licence
 MIT License
 
-🤝 Contribution
+** Contribution
 Les contributions sont les bienvenues ! N'hésitez pas à ouvrir une issue ou une pull request.
 
-text
