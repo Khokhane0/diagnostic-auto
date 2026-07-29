@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🚗 Diagnostic Auto - Tableau de Bord</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <!-- Chart.js pour les graphiques -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <!-- En-tête -->
+    <header>
+        <div class="header-content">
+            <h1>🚗 Diagnostic Auto</h1>
+            <div class="status-container">
+                <span id="status-dot" class="status-dot offline"></span>
+                <span id="status-text">Hors ligne</span>
+            </div>
+        </div>
+        <div class="controls">
+            <input type="text" id="port-input" placeholder="Port (ex: COM3)" value="">
+            <button id="connect-btn" onclick="connect()">🔌 Connecter</button>
+            <button id="disconnect-btn" onclick="disconnect()" style="display:none;">⛔ Déconnecter</button>
+            <button onclick="clearDTC()" id="clear-dtc-btn" style="display:none;">🗑️ Effacer DTC</button>
+        </div>
+    </header>
+
+    <!-- Grille de données en temps réel -->
+    <div class="dashboard-grid">
+        <!-- RPM -->
+        <div class="gauge-card">
+            <h3>Régime Moteur</h3>
+            <div class="value-container">
+                <span class="value" id="rpm">-</span>
+                <span class="unit">RPM</span>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="rpm-bar" style="width:0%"></div>
+            </div>
+        </div>
+
+        <!-- Vitesse -->
+        <div class="gauge-card">
+            <h3>Vitesse</h3>
+            <div class="value-container">
+                <span class="value" id="speed">-</span>
+                <span class="unit">km/h</span>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="speed-bar" style="width:0%"></div>
+            </div>
+        </div>
+
+        <!-- Température -->
+        <div class="gauge-card">
+            <h3>Température Moteur</h3>
+            <div class="value-container">
+                <span class="value" id="coolant_temp">-</span>
+                <span class="unit">°C</span>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="temp-bar" style="width:0%"></div>
+            </div>
+        </div>
+
+        <!-- Charge Moteur -->
+        <div class="gauge-card">
+            <h3>Charge Moteur</h3>
+            <div class="value-container">
+                <span class="value" id="engine_load">-</span>
+                <span class="unit">%</span>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="load-bar" style="width:0%"></div>
+            </div>
+        </div>
+
+        <!-- Position Papillon -->
+        <div class="gauge-card">
+            <h3>Position Papillon</h3>
+            <div class="value-container">
+                <span class="value" id="throttle_pos">-</span>
+                <span class="unit">%</span>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="throttle-bar" style="width:0%"></div>
+            </div>
+        </div>
+
+        <!-- Niveau Carburant -->
+        <div class="gauge-card">
+            <h3>Carburant</h3>
+            <div class="value-container">
+                <span class="value" id="fuel_level">-</span>
+                <span class="unit">%</span>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="fuel-bar" style="width:0%"></div>
+            </div>
+        </div>
+
+        <!-- Tension Batterie -->
+        <div class="gauge-card">
+            <h3>Tension Batterie</h3>
+            <div class="value-container">
+                <span class="value" id="control_module_voltage">-</span>
+                <span class="unit">V</span>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="voltage-bar" style="width:0%"></div>
+            </div>
+        </div>
+
+        <!-- Temps de Fonctionnement -->
+        <div class="gauge-card">
+            <h3>Temps de Fonctionnement</h3>
+            <div class="value-container">
+                <span class="value" id="runtime">-</span>
+                <span class="unit">s</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Graphiques -->
+    <div class="charts-section">
+        <div class="chart-container">
+            <h3>📊 Évolution du Régime Moteur</h3>
+            <canvas id="rpmChart"></canvas>
+        </div>
+        <div class="chart-container">
+            <h3>📊 Évolution de la Vitesse</h3>
+            <canvas id="speedChart"></canvas>
+        </div>
+    </div>
+
+    <!-- Codes d'erreur -->
+    <div class="dtc-section">
+        <h3>🔴 Codes d'Erreur (DTC)</h3>
+        <div id="dtc-list">
+            <p class="no-dtc">Aucun code d'erreur</p>
+        </div>
+    </div>
+
+    <script>
+        // Initialisation
+        let rpmChart, speedChart;
+        let updateInterval;
+        let dataHistory = { rpm: [], speed: [] };
+        const MAX_POINTS = 30;
+
+        // Configuration des graphiques
+        function initCharts() {
+            const ctxRPM = document.getElementById('rpmChart').getContext('2d');
+            const ctxSpeed = document.getElementById('speedChart').getContext('2d');
+
+            rpmChart = new Chart(ctxRPM, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'RPM',
+                        data: [],
+                        borderColor: '#ff6b6b',
+                        backgroundColor: 'rgba(255, 107, 107, 0.1)',
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: { beginAtZero: true }
+                    }
+                }
+            });
+
+            speedChart = new Chart(ctxSpeed, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Vitesse (km/h)',
+                        data: [],
+                        borderColor: '#4ecdc4',
+                        backgroundColor: 'rgba(78, 205, 196, 0.1)',
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: { beginAtZero: true }
+                    }
+                }
+            });
+        }
+
+        // Mise à jour des données
+        async function updateData() {
+            try {
+                const response = await fetch('/api/data');
+                const result = await response.json();
+                
+                if (result.data && result.data.data) {
+                    const data = result.data.data;
+                    
+                    // Mise à jour des valeurs
+                    updateGauge('rpm', data.rpm?.value, data.rpm?.unit);
+                    updateGauge('speed', data.speed?.value, data.speed?.unit);
+                    updateGauge('coolant_temp', data.coolant_temp?.value, data.coolant_temp?.unit);
+                    updateGauge('engine_load', data.engine_load?.value, data.engine_load?.unit);
+                    updateGauge('throttle_pos', data.throttle_pos?.value, data.throttle_pos?.unit);
+                    updateGauge('fuel_level', data.fuel_level?.value, data.fuel_level?.unit);
+                    updateGauge('control_module_voltage', data.control_module_voltage?.value, data.control_module_voltage?.unit);
+                    updateGauge('runtime', data.runtime?.value, data.runtime?.unit);
+                    
+                    // Mise à jour des graphiques
+                    updateCharts(data.rpm?.value, data.speed?.value);
+                    
+                    // Mise à jour des DTC
+                    if (data.dtc) {
+                        updateDTC(data.dtc);
+                    }
+                }
+            } catch (error) {
+                console.error('Erreur:', error);
+            }
+        }
+
+        function updateGauge(id, value, unit) {
+            const element = document.getElementById(id);
+            const bar = document.getElementById(id + '-bar');
+            
+            if (element && value !== undefined && value !== null) {
+                element.textContent = value.toFixed(1);
+                
+                // Mise à jour des barres de progression
+                if (bar) {
+                    let percent = Math.min(value * 100, 100);
+                    if (id === 'rpm') percent = Math.min((value / 7000) * 100, 100);
+                    if (id === 'coolant_temp') percent = Math.min((value / 120) * 100, 100);
+                    if (id === 'control_module_voltage') percent = Math.min(((value - 10) / 5) * 100, 100);
+                    bar.style.width = percent + '%';
+                    
+                    // Changement de couleur selon la valeur
+                    if (percent > 80) {
+                        bar.style.background = 'linear-gradient(90deg, #ff6b6b, #ee5a24)';
+                    } else if (percent > 60) {
+                        bar.style.background = 'linear-gradient(90deg, #feca57, #ff9f43)';
+                    } else {
+                        bar.style.background = 'linear-gradient(90deg, #00b894, #00cec9)';
+                    }
+                }
+            }
+        }
+
+        function updateCharts(rpm, speed) {
+            if (rpm !== undefined && rpm !== null) {
+                dataHistory.rpm.push(rpm);
+                if (dataHistory.rpm.length > MAX_POINTS) dataHistory.rpm.shift();
+                rpmChart.data.labels = dataHistory.rpm.map((_, i) => i);
+                rpmChart.data.datasets[0].data = dataHistory.rpm;
+                rpmChart.update('none');
+            }
+            
+            if (speed !== undefined && speed !== null) {
+                dataHistory.speed.push(speed);
+                if (dataHistory.speed.length > MAX_POINTS) dataHistory.speed.shift();
+                speedChart.data.labels = dataHistory.speed.map((_, i) => i);
+                speedChart.data.datasets[0].data = dataHistory.speed;
+                speedChart.update('none');
+            }
+        }
+
+        function updateDTC(dtcList) {
+            const container = document.getElementById('dtc-list');
+            if (dtcList && dtcList.length > 0) {
+                container.innerHTML = dtcList.map(dtc => `
+                    <div class="dtc-item">
+                        <span class="dtc-code">${dtc.code}</span>
+                        <span class="dtc-desc">${dtc.description || 'Description non disponible'}</span>
+                    </div>
+                `).join('');
+                document.getElementById('clear-dtc-btn').style.display = 'inline-block';
+            } else {
+                container.innerHTML = '<p class="no-dtc">✅ Aucun code d\'erreur</p>';
+                document.getElementById('clear-dtc-btn').style.display = 'none';
+            }
+        }
+
+        async function connect() {
+            const port = document.getElementById('port-input').value;
+            try {
+                const response = await fetch('/api/connect', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ port: port || null })
+                });
+                const result = await response.json();
+                
+                if (result.success) {
+                    document.getElementById('status-dot').className = 'status-dot online';
+                    document.getElementById('status-text').textContent = 'Connecté';
+                    document.getElementById('connect-btn').style.display = 'none';
+                    document.getElementById('disconnect-btn').style.display = 'inline-block';
+                    
+                    // Démarrer la mise à jour
+                    if (updateInterval) clearInterval(updateInterval);
+                    updateInterval = setInterval(updateData, 1000);
+                    setTimeout(updateData, 100);
+                    
+                    // Activer le bouton DTC
+                    document.getElementById('clear-dtc-btn').style.display = 'inline-block';
+                } else {
+                    alert('Erreur: ' + result.message);
+                }
+            } catch (error) {
+                alert('Erreur: ' + error.message);
+            }
+        }
+
+        async function disconnect() {
+            try {
+                await fetch('/api/disconnect', { method: 'POST' });
+                document.getElementById('status-dot').className = 'status-dot offline';
+                document.getElementById('status-text').textContent = 'Hors ligne';
+                document.getElementById('connect-btn').style.display = 'inline-block';
+                document.getElementById('disconnect-btn').style.display = 'none';
+                document.getElementById('clear-dtc-btn').style.display = 'none';
+                
+                if (updateInterval) clearInterval(updateInterval);
+                
+                // Réinitialiser les valeurs
+                document.querySelectorAll('.value').forEach(el => el.textContent = '-');
+                document.querySelectorAll('.progress-fill').forEach(el => el.style.width = '0%');
+            } catch (error) {
+                alert('Erreur: ' + error.message);
+            }
+        }
+
+        async function clearDTC() {
+            if (!confirm('Effacer tous les codes d\'erreur ?')) return;
+            try {
+                const response = await fetch('/api/clear_dtc', { method: 'POST' });
+                const result = await response.json();
+                if (result.success) {
+                    alert('✅ Codes effacés avec succès !');
+                    setTimeout(updateData, 1000);
+                } else {
+                    alert('❌ Erreur: ' + result.message);
+                }
+            } catch (error) {
+                alert('Erreur: ' + error.message);
+            }
+        }
+
+        // Chargement initial
+        window.onload = function() {
+            initCharts();
+            
+            // Vérification du statut
+            fetch('/api/status')
+                .then(res => res.json())
+                .then(data => {
+                    if (data.connected) {
+                        document.getElementById('status-dot').className = 'status-dot online';
+                        document.getElementById('status-text').textContent = 'Connecté';
+                        document.getElementById('connect-btn').style.display = 'none';
+                        document.getElementById('disconnect-btn').style.display = 'inline-block';
+                        updateInterval = setInterval(updateData, 1000);
+                        setTimeout(updateData, 100);
+                    }
+                })
+                .catch(console.error);
+        };
+    </script>
+</body>
+</html>

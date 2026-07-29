@@ -1,0 +1,43 @@
+# Environnement virtuel
+.venv/
+venv/
+env/
+ENV/
+
+# Fichiers Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+*.log
+
+# VS Code
+.vscode/
+*.code-workspace
+
+# Fichiers système
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Fichiers de données
+*.db
+*.sqlite
+*.sqlite3
+
+# Fichiers sensibles
+*.env
+config.py
+secrets.py
+*.key
+*.pem
+
+# Logs
+logs/
+*.log

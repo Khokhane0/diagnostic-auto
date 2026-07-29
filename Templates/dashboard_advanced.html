@@ -1,0 +1,824 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🚗 Diagnostic Auto - Expert</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #0a0a0f;
+            color: #e0e0e0;
+            padding: 20px;
+        }
+
+        /* Header */
+        header {
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            border-radius: 15px;
+            padding: 20px 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .header-left h1 {
+            font-size: 1.8rem;
+            background: linear-gradient(90deg, #00b894, #00cec9);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .status {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 16px;
+            border-radius: 20px;
+            background: rgba(255,255,255,0.05);
+        }
+
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        .status-dot.online {
+            background: #00b894;
+            box-shadow: 0 0 20px #00b894;
+        }
+
+        .status-dot.offline {
+            background: #ff6b6b;
+            box-shadow: 0 0 20px #ff6b6b;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .controls input {
+            padding: 10px 15px;
+            border: 1px solid #2d3436;
+            border-radius: 8px;
+            background: #1a1a2e;
+            color: #e0e0e0;
+            width: 150px;
+        }
+
+        .controls button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-connect {
+            background: linear-gradient(90deg, #00b894, #00cec9);
+            color: #fff;
+        }
+
+        .btn-connect:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 184, 148, 0.4);
+        }
+
+        .btn-disconnect {
+            background: linear-gradient(90deg, #ff6b6b, #ee5a24);
+            color: #fff;
+        }
+
+        .btn-disconnect:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(255, 107, 107, 0.4);
+        }
+
+        .btn-danger {
+            background: linear-gradient(90deg, #feca57, #ff9f43);
+            color: #fff;
+        }
+
+        .btn-danger:hover {
+            transform: translateY(-2px);
+        }
+
+        /* Onglets */
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        .tab {
+            padding: 12px 24px;
+            background: #1a1a2e;
+            border: 1px solid #2d3436;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 500;
+        }
+
+        .tab:hover {
+            background: #2d3436;
+        }
+
+        .tab.active {
+            background: linear-gradient(90deg, #00b894, #00cec9);
+            border-color: #00b894;
+            color: #fff;
+        }
+
+        /* Contenu */
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Grille de données */
+        .data-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .data-card {
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            border-radius: 12px;
+            padding: 15px 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            transition: transform 0.2s;
+        }
+
+        .data-card:hover {
+            transform: translateY(-3px);
+        }
+
+        .data-card .label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            color: #b2bec3;
+            letter-spacing: 1px;
+        }
+
+        .data-card .value {
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin: 5px 0;
+        }
+
+        .data-card .unit {
+            font-size: 0.9rem;
+            color: #b2bec3;
+        }
+
+        .data-card .status-badge {
+            display: inline-block;
+            padding: 2px 10px;
+            border-radius: 10px;
+            font-size: 0.7rem;
+            font-weight: 600;
+        }
+
+        .status-badge.success {
+            background: rgba(0, 184, 148, 0.2);
+            color: #00b894;
+        }
+
+        .status-badge.not_supported {
+            background: rgba(255, 107, 107, 0.2);
+            color: #ff6b6b;
+        }
+
+        /* DTC */
+        .dtc-list {
+            background: #1a1a2e;
+            border-radius: 12px;
+            padding: 20px;
+        }
+
+        .dtc-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px;
+            border-left: 3px solid #ff6b6b;
+            background: rgba(255, 107, 107, 0.05);
+            border-radius: 8px;
+            margin-bottom: 8px;
+        }
+
+        .dtc-item .code {
+            font-weight: 700;
+            color: #ff6b6b;
+            font-family: 'Courier New', monospace;
+            font-size: 1.1rem;
+        }
+
+        .dtc-item .desc {
+            color: #b2bec3;
+        }
+
+        .dtc-item .system-tag {
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        /* Graphiques */
+        .chart-container {
+            background: #1a1a2e;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .chart-container h3 {
+            margin-bottom: 15px;
+            color: #b2bec3;
+        }
+
+        .chart-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        /* Services */
+        .service-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .service-btn {
+            padding: 20px;
+            background: #1a1a2e;
+            border: 1px solid #2d3436;
+            border-radius: 12px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            color: #e0e0e0;
+        }
+
+        .service-btn:hover {
+            background: #2d3436;
+            border-color: #00b894;
+            transform: translateY(-3px);
+        }
+
+        .service-btn .icon {
+            font-size: 2rem;
+            margin-bottom: 10px;
+            display: block;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .chart-row {
+                grid-template-columns: 1fr;
+            }
+
+            .data-grid {
+                grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            }
+
+            header {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .controls {
+                justify-content: center;
+            }
+        }
+
+        /* Animations */
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+
+        .loading {
+            color: #b2bec3;
+            text-align: center;
+            padding: 40px;
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="header-left">
+        <h1>🚗 Diagnostic Auto Expert</h1>
+        <div class="status">
+            <span class="status-dot offline" id="statusDot"></span>
+            <span id="statusText">Hors ligne</span>
+        </div>
+    </div>
+    <div class="controls">
+        <input type="text" id="portInput" placeholder="Port (ex: COM3)">
+        <button class="btn-connect" onclick="connect()" id="connectBtn">🔌 Connecter</button>
+        <button class="btn-disconnect" onclick="disconnect()" id="disconnectBtn" style="display:none;">⛔ Déconnecter</button>
+        <button class="btn-danger" onclick="clearAllDTC()" id="clearBtn" style="display:none;">🗑️ Effacer DTC</button>
+    </div>
+</header>
+
+<!-- Onglets -->
+<div class="tabs">
+    <div class="tab active" onclick="switchTab('dashboard')">📊 Tableau de bord</div>
+    <div class="tab" onclick="switchTab('dtc')">🔴 Codes Erreur</div>
+    <div class="tab" onclick="switchTab('advanced')">⚙️ Avancé</div>
+    <div class="tab" onclick="switchTab('services')">🔧 Services</div>
+    <div class="tab" onclick="switchTab('live')">📈 Live Data</div>
+</div>
+
+<!-- Onglet : Tableau de bord -->
+<div class="tab-content active" id="tab-dashboard">
+    <div class="data-grid" id="dashboardGrid">
+        <div class="loading">⏳ En attente de connexion...</div>
+    </div>
+</div>
+
+<!-- Onglet : Codes Erreur -->
+<div class="tab-content" id="tab-dtc">
+    <div class="dtc-list" id="dtcContainer">
+        <p style="color: #b2bec3; text-align: center;">🔍 Aucun code d'erreur</p>
+    </div>
+</div>
+
+<!-- Onglet : Avancé -->
+<div class="tab-content" id="tab-advanced">
+    <div style="background: #1a1a2e; border-radius: 12px; padding: 20px;">
+        <h3>📡 Commande personnalisée</h3>
+        <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 15px;">
+            <input type="text" id="advMode" placeholder="Mode (ex: 22)" style="padding: 10px; background: #0a0a0f; border: 1px solid #2d3436; border-radius: 8px; color: #e0e0e0; width: 100px;">
+            <input type="text" id="advPid" placeholder="PID (ex: 0101)" style="padding: 10px; background: #0a0a0f; border: 1px solid #2d3436; border-radius: 8px; color: #e0e0e0; width: 120px;">
+            <input type="text" id="advName" placeholder="Nom" style="padding: 10px; background: #0a0a0f; border: 1px solid #2d3436; border-radius: 8px; color: #e0e0e0; width: 150px;">
+            <button onclick="sendAdvancedCommand()" style="padding: 10px 20px; background: linear-gradient(90deg, #00b894, #00cec9); border: none; border-radius: 8px; color: #fff; font-weight: 600; cursor: pointer;">📤 Envoyer</button>
+        </div>
+        <div id="advResult" style="margin-top: 20px; background: #0a0a0f; border-radius: 8px; padding: 15px; font-family: 'Courier New', monospace; color: #00b894; min-height: 50px;">
+            En attente...
+        </div>
+    </div>
+
+    <div style="background: #1a1a2e; border-radius: 12px; padding: 20px; margin-top: 20px;">
+        <h3>📋 Informations véhicule</h3>
+        <div id="vehicleInfo" style="margin-top: 15px;">
+            <div style="color: #b2bec3;">⏳ En attente...</div>
+        </div>
+    </div>
+</div>
+
+<!-- Onglet : Services -->
+<div class="tab-content" id="tab-services">
+    <div class="service-grid">
+        <div class="service-btn" onclick="executeService('reset_adaptations')">
+            <span class="icon">🔄</span>
+            <strong>Réinitialiser adaptations</strong>
+            <small style="display: block; color: #b2bec3; margin-top: 5px;">Moteur / transmission</small>
+        </div>
+        <div class="service-btn" onclick="executeService('reset_oil')">
+            <span class="icon">🛢️</span>
+            <strong>Réinitialiser vidange</strong>
+            <small style="display: block; color: #b2bec3; margin-top: 5px;">Service huile</small>
+        </div>
+        <div class="service-btn" onclick="executeService('reset_brakes')">
+            <span class="icon">🛞</span>
+            <strong>Réinitialiser freins</strong>
+            <small style="display: block; color: #b2bec3; margin-top: 5px;">Plaquettes / disques</small>
+        </div>
+        <div class="service-btn" onclick="executeService('injector_test')">
+            <span class="icon">💉</span>
+            <strong>Test injecteurs</strong>
+            <small style="display: block; color: #b2bec3; margin-top: 5px;">Diagnostic</small>
+        </div>
+        <div class="service-btn" onclick="executeService('fuel_pump_test')">
+            <span class="icon">⛽</span>
+            <strong>Test pompe carburant</strong>
+            <small style="display: block; color: #b2bec3; margin-top: 5px;">Diagnostic</small>
+        </div>
+    </div>
+    <div id="serviceResult" style="margin-top: 20px; background: #1a1a2e; border-radius: 12px; padding: 20px; color: #b2bec3;">
+        Cliquez sur un service pour l'exécuter
+    </div>
+</div>
+
+<!-- Onglet : Live Data -->
+<div class="tab-content" id="tab-live">
+    <div class="chart-row">
+        <div class="chart-container">
+            <h3>📊 Régime moteur (RPM)</h3>
+            <canvas id="rpmChart"></canvas>
+        </div>
+        <div class="chart-container">
+            <h3>📊 Vitesse (km/h)</h3>
+            <canvas id="speedChart"></canvas>
+        </div>
+    </div>
+    <div class="chart-row">
+        <div class="chart-container">
+            <h3>🌡️ Température moteur (°C)</h3>
+            <canvas id="tempChart"></canvas>
+        </div>
+        <div class="chart-container">
+            <h3>⚡ Charge moteur (%)</h3>
+            <canvas id="loadChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Variables globales
+    let updateInterval;
+    let rpmChart, speedChart, tempChart, loadChart;
+    let dataHistory = { rpm: [], speed: [], temp: [], load: [] };
+    const MAX_POINTS = 60;
+
+    // Initialisation des graphiques
+    function initCharts() {
+        const commonOptions = {
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: false,
+            plugins: { legend: { display: false } },
+            scales: { y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.05)' } }, x: { display: false } }
+        };
+
+        rpmChart = new Chart(document.getElementById('rpmChart'), {
+            type: 'line',
+            data: { labels: [], datasets: [{ label: 'RPM', data: [], borderColor: '#ff6b6b', backgroundColor: 'rgba(255,107,107,0.1)', fill: true, tension: 0.4 }] },
+            options: { ...commonOptions, scales: { ...commonOptions.scales, y: { ...commonOptions.scales.y, max: 8000 } } }
+        });
+
+        speedChart = new Chart(document.getElementById('speedChart'), {
+            type: 'line',
+            data: { labels: [], datasets: [{ label: 'Vitesse', data: [], borderColor: '#4ecdc4', backgroundColor: 'rgba(78,205,196,0.1)', fill: true, tension: 0.4 }] },
+            options: { ...commonOptions, scales: { ...commonOptions.scales, y: { ...commonOptions.scales.y, max: 200 } } }
+        });
+
+        tempChart = new Chart(document.getElementById('tempChart'), {
+            type: 'line',
+            data: { labels: [], datasets: [{ label: 'Température', data: [], borderColor: '#feca57', backgroundColor: 'rgba(254,202,87,0.1)', fill: true, tension: 0.4 }] },
+            options: { ...commonOptions, scales: { ...commonOptions.scales, y: { ...commonOptions.scales.y, max: 120 } } }
+        });
+
+        loadChart = new Chart(document.getElementById('loadChart'), {
+            type: 'line',
+            data: { labels: [], datasets: [{ label: 'Charge', data: [], borderColor: '#a29bfe', backgroundColor: 'rgba(162,155,254,0.1)', fill: true, tension: 0.4 }] },
+            options: { ...commonOptions, scales: { ...commonOptions.scales, y: { ...commonOptions.scales.y, max: 100 } } }
+        });
+    }
+
+    // Mise à jour des données
+    async function updateData() {
+        try {
+            const response = await fetch('/api/data');
+            const result = await response.json();
+
+            if (result.data && result.data.data) {
+                const data = result.data.data;
+                const standard = data.standard_pids || {};
+                const dtc = data.dtc || {};
+
+                // Mettre à jour le tableau de bord
+                updateDashboard(standard);
+
+                // Mettre à jour les graphiques
+                updateCharts(standard);
+
+                // Mettre à jour les DTC
+                updateDTC(dtc);
+
+                // Mettre à jour les infos véhicule
+                if (data.vehicle_info) {
+                    updateVehicleInfo(data.vehicle_info);
+                }
+            }
+        } catch (error) {
+            console.error('Erreur:', error);
+        }
+    }
+
+    function updateDashboard(data) {
+        const grid = document.getElementById('dashboardGrid');
+        
+        if (!data || Object.keys(data).length === 0) {
+            grid.innerHTML = '<div class="loading">⏳ En attente de données...</div>';
+            return;
+        }
+
+        let html = '';
+        const displayPids = ['rpm', 'speed', 'coolant_temp', 'engine_load', 'throttle_pos', 'fuel_level', 'control_module_voltage', 'intake_temp'];
+        
+        for (const pid of displayPids) {
+            const item = data[pid] || {};
+            const value = item.value !== undefined && item.value !== null ? item.value : '-';
+            const unit = item.unit || '';
+            const name = item.name || pid;
+            const status = item.status || 'unknown';
+            
+            html += `
+                <div class="data-card">
+                    <div class="label">${name}</div>
+                    <div class="value">${value} <span class="unit">${unit}</span></div>
+                    <span class="status-badge ${status}">${status}</span>
+                </div>
+            `;
+        }
+
+        // Ajouter les DTC
+        if (data.dtc) {
+            const totalDTC = Object.values(data.dtc).reduce((sum, arr) => sum + arr.length, 0);
+            html += `
+                <div class="data-card" style="border-left: 3px solid ${totalDTC > 0 ? '#ff6b6b' : '#00b894'};">
+                    <div class="label">🔴 Codes Erreur</div>
+                    <div class="value">${totalDTC}</div>
+                    <span class="status-badge ${totalDTC > 0 ? 'not_supported' : 'success'}">${totalDTC > 0 ? '⚠️ Présents' : '✅ Aucun'}</span>
+                </div>
+            `;
+        }
+
+        grid.innerHTML = html;
+    }
+
+    function updateCharts(data) {
+        const rpm = data.rpm?.value;
+        const speed = data.speed?.value;
+        const temp = data.coolant_temp?.value;
+        const load = data.engine_load?.value;
+
+        if (rpm !== undefined && rpm !== null) {
+            dataHistory.rpm.push(rpm);
+            if (dataHistory.rpm.length > MAX_POINTS) dataHistory.rpm.shift();
+            rpmChart.data.labels = dataHistory.rpm.map((_, i) => i);
+            rpmChart.data.datasets[0].data = dataHistory.rpm;
+            rpmChart.update('none');
+        }
+
+        if (speed !== undefined && speed !== null) {
+            dataHistory.speed.push(speed);
+            if (dataHistory.speed.length > MAX_POINTS) dataHistory.speed.shift();
+            speedChart.data.labels = dataHistory.speed.map((_, i) => i);
+            speedChart.data.datasets[0].data = dataHistory.speed;
+            speedChart.update('none');
+        }
+
+        if (temp !== undefined && temp !== null) {
+            dataHistory.temp.push(temp);
+            if (dataHistory.temp.length > MAX_POINTS) dataHistory.temp.shift();
+            tempChart.data.labels = dataHistory.temp.map((_, i) => i);
+            tempChart.data.datasets[0].data = dataHistory.temp;
+            tempChart.update('none');
+        }
+
+        if (load !== undefined && load !== null) {
+            dataHistory.load.push(load);
+            if (dataHistory.load.length > MAX_POINTS) dataHistory.load.shift();
+            loadChart.data.labels = dataHistory.load.map((_, i) => i);
+            loadChart.data.datasets[0].data = dataHistory.load;
+            loadChart.update('none');
+        }
+    }
+
+    function updateDTC(dtcData) {
+        const container = document.getElementById('dtcContainer');
+        let allDTC = [];
+
+        for (const [system, codes] of Object.entries(dtcData)) {
+            for (const code of codes) {
+                allDTC.push({ ...code, system });
+            }
+        }
+
+        if (allDTC.length === 0) {
+            container.innerHTML = '<p style="color: #00b894; text-align: center; padding: 40px;">✅ Aucun code d\'erreur détecté</p>';
+            return;
+        }
+
+        let html = '';
+        for (const dtc of allDTC) {
+            html += `
+                <div class="dtc-item">
+                    <div>
+                        <span class="code">${dtc.code}</span>
+                        <span class="desc">${dtc.description || 'Description non disponible'}</span>
+                    </div>
+                    <span class="system-tag">${dtc.system || 'Moteur'}</span>
+                </div>
+            `;
+        }
+        container.innerHTML = html;
+    }
+
+    function updateVehicleInfo(info) {
+        const container = document.getElementById('vehicleInfo');
+        if (!info || !info.vin) {
+            container.innerHTML = '<div style="color: #b2bec3;">ℹ️ Informations véhicule non disponibles</div>';
+            return;
+        }
+
+        container.innerHTML = `
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <div><strong>VIN</strong>: ${info.vin || 'N/A'}</div>
+                <div><strong>Type</strong>: ${info.type || 'N/A'}</div>
+                <div><strong>Port</strong>: ${info.port || 'N/A'}</div>
+                <div><strong>PIDs supportés</strong>: ${(info.supported_pids || []).length}</div>
+            </div>
+        `;
+    }
+
+    // Connexion
+    async function connect() {
+        const port = document.getElementById('portInput').value;
+        try {
+            const response = await fetch('/api/connect', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ port: port || null })
+            });
+            const result = await response.json();
+
+            if (result.success) {
+                document.getElementById('statusDot').className = 'status-dot online';
+                document.getElementById('statusText').textContent = 'Connecté';
+                document.getElementById('connectBtn').style.display = 'none';
+                document.getElementById('disconnectBtn').style.display = 'inline-block';
+                document.getElementById('clearBtn').style.display = 'inline-block';
+
+                if (updateInterval) clearInterval(updateInterval);
+                updateInterval = setInterval(updateData, 500);
+                setTimeout(updateData, 100);
+            } else {
+                alert('❌ ' + result.message);
+            }
+        } catch (error) {
+            alert('❌ Erreur: ' + error.message);
+        }
+    }
+
+    async function disconnect() {
+        try {
+            await fetch('/api/disconnect', { method: 'POST' });
+            document.getElementById('statusDot').className = 'status-dot offline';
+            document.getElementById('statusText').textContent = 'Hors ligne';
+            document.getElementById('connectBtn').style.display = 'inline-block';
+            document.getElementById('disconnectBtn').style.display = 'none';
+            document.getElementById('clearBtn').style.display = 'none';
+
+            if (updateInterval) clearInterval(updateInterval);
+            document.getElementById('dashboardGrid').innerHTML = '<div class="loading">⏳ En attente de connexion...</div>';
+        } catch (error) {
+            alert('Erreur: ' + error.message);
+        }
+    }
+
+    async function clearAllDTC() {
+        if (!confirm('⚠️ Effacer tous les codes d\'erreur ? Cette action est irréversible.')) return;
+        try {
+            const response = await fetch('/api/clear_dtc', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ system: 'all' })
+            });
+            const result = await response.json();
+            if (result.success) {
+                alert('✅ Codes effacés !');
+                setTimeout(updateData, 1000);
+            } else {
+                alert('❌ Échec');
+            }
+        } catch (error) {
+            alert('Erreur: ' + error.message);
+        }
+    }
+
+    async function executeService(type) {
+        const resultDiv = document.getElementById('serviceResult');
+        resultDiv.innerHTML = '⏳ Exécution en cours...';
+
+        try {
+            const response = await fetch('/api/service', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ service: type })
+            });
+            const result = await response.json();
+
+            if (result.success) {
+                resultDiv.innerHTML = `
+                    <div style="color: #00b894;">
+                        ✅ ${result.message}
+                        <pre style="background: #0a0a0f; padding: 10px; border-radius: 8px; margin-top: 10px; color: #b2bec3; font-size: 0.8rem;">${result.response || 'Aucune réponse'}</pre>
+                    </div>
+                `;
+            } else {
+                resultDiv.innerHTML = `<div style="color: #ff6b6b;">❌ ${result.message}</div>`;
+            }
+        } catch (error) {
+            resultDiv.innerHTML = `<div style="color: #ff6b6b;">❌ Erreur: ${error.message}</div>`;
+        }
+    }
+
+    async function sendAdvancedCommand() {
+        const mode = document.getElementById('advMode').value;
+        const pid = document.getElementById('advPid').value;
+        const name = document.getElementById('advName').value || 'Lecture avancée';
+        const resultDiv = document.getElementById('advResult');
+
+        if (!mode || !pid) {
+            resultDiv.innerHTML = '⚠️ Mode et PID requis';
+            return;
+        }
+
+        resultDiv.innerHTML = '⏳ Envoi...';
+
+        try {
+            const response = await fetch('/api/advanced_read', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ mode, pid, name })
+            });
+            const result = await response.json();
+
+            resultDiv.innerHTML = `
+                <strong>${result.name || name}</strong>
+                <div style="margin-top: 5px;">
+                    Valeur: <span style="color: #fff;">${result.value !== undefined && result.value !== null ? result.value : 'N/A'}</span>
+                    ${result.unit ? `<span style="color: #b2bec3;">${result.unit}</span>` : ''}
+                </div>
+                <div style="color: #b2bec3; font-size: 0.8rem; margin-top: 5px;">Statut: ${result.status}</div>
+                ${result.message ? `<div style="color: #ff6b6b; font-size: 0.8rem;">${result.message}</div>` : ''}
+            `;
+        } catch (error) {
+            resultDiv.innerHTML = `<div style="color: #ff6b6b;">❌ Erreur: ${error.message}</div>`;
+        }
+    }
+
+    function switchTab(tabId) {
+        document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+        document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+        document.getElementById('tab-' + tabId).classList.add('active');
+        document.querySelector(`.tab[onclick="switchTab('${tabId}')"]`).classList.add('active');
+    }
+
+    // Initialisation
+    window.onload = function() {
+        initCharts();
+
+        // Vérifier le statut
+        fetch('/api/status')
+            .then(res => res.json())
+            .then(data => {
+                if (data.connected) {
+                    document.getElementById('statusDot').className = 'status-dot online';
+                    document.getElementById('statusText').textContent = 'Connecté';
+                    document.getElementById('connectBtn').style.display = 'none';
+                    document.getElementById('disconnectBtn').style.display = 'inline-block';
+                    document.getElementById('clearBtn').style.display = 'inline-block';
+                    updateInterval = setInterval(updateData, 500);
+                    setTimeout(updateData, 100);
+                }
+            })
+            .catch(console.error);
+    };
+</script>
+</body>
+</html>
